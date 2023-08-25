@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CropDesigner</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jspreadsheet-ce/dist/jspreadsheet.min.css"
+        type="text/css" />
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/jspreadsheet-ce/dist/index.min.js"></script>
+    <link rel="stylesheet" href="https://bossanova.uk/jspreadsheet/v4/jexcel.css" type="text/css" />
+    <script src="https://jsuites.net/v4/jsuites.js"></script>
+    <link rel="stylesheet" href="https://jsuites.net/v4/jsuites.css" type="text/css" />
+    <style>
+        /* Styling for the SVG container */
+        #svgContainer {
+            width: 100%;
+            height: auto;
+            padding-left: 30px;
+            padding-right: 30px;
+            background-color: #f0f0f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Styling for dynamically drawn rectangles */
+        rect {
+            cursor: crosshair;
+            fill-opacity: 1;
+            transition: stroke 0.2s ease 0s, fill 0.2s ease 0s;
+        }
+
+        /* Styling for clicked rectangles */
+        rect:hover {
+            fill-opacity: 0.4;
+        }
+
+        /* Styling for the rectangle being drawn */
+        rect[width="0"][height="0"] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="CropDesigner">
+        <div class="CropDesigner__ImageView" id="CropDesigner__ImageView" style="position: relative;">
+
+        </div>
+        <div class="CropDesigner__TableView" id="CropDesigner__TableView">
+
+        </div>
+
+
+
+    </div>
+
+    <script>
+
+        function cropDesigner() {
+            this.image = null;
+            this.data = [];
+            this.svgContainer = null;
+            this.svgview = null;
+            this.tableView = null;
+            this.currentRect = null;
+            this.isDrawing = false;
+            this.startX = 0;
+            this.startY = 0;
+            this.width = 0;
+            this.height = 0;
+            this.selectedPlot = null;
+            this.listeners = [];
+            this.mx = 0;
+            this.my = 0;
+
+            this.handelPlotMove = (e) => {
+                const id = this.selectedPlot.id;
+                const rect = this.selectedPlot.children[0].children[0];
+                const rectBoundingBox = rect.getBoundingClientRect();
+
+                let x = rectBoundingBox.x;
+                let y = rectBoundingBox.y;
+                let width = rectBoundingBox.width + x;
+                let height = rectBoundingBox.height + y;
+
+                const svgxy = this.getSVGPoint(x, y);
+                x = Math.round(svgxy.x);
+                y = Math.round(svgxy.y);
+             
+                const svgwh = this.getSVGPoint(width, height);
+                width = svgwh.x;
+                height = svgwh.y;
+
+                svgpoint = this.getSVGPoint(event.clientX, event.clientY)
+                const scx = svgpoint.x;
+                const scy = svgpoint.y;
+
+                const mx = scx - this.mx;
+                const my = scy - this.my;
+                x = Math.round(x + mx);
+                y = Math.round(y + my);
+
+                console.log("increased xy" , x , y);
+                
+
+
+
+                this.selectedPlot.setAttribute('transform', 'translate(' + x + ' ' + y + ')');
+               this.mx = this.mx+mx;
+               this.my = this.my+my;
+               this.startX = x;
+               this.startY = y;
+               this.width = width;
+               this.height = height;
+              
+
+
+
+            }
+            this.handlePlotMouseDown = (e) => {
+                this.selectedPlot.addEventListener("mousemove", this.handelPlotMove);
+                this.selectedPlot.addEventListener("mouseup", this.handlePlotMouseUp);
+                const svgPoint = this.getSVGPoint(event.clientX, event.clientY);
+                console.log("start",svgPoint)
+                this.mx = svgPoint.x;
+                this.my = svgPoint.y;
+
+            }
+            this.handlePlotMouseUp = (e) => {
+                this.selectedPlot.removeEventListener("mousemove", this.handelPlotMove);
+                this.selectedPlot.addEventListener("mouseup", this.handlePlotMouseUp);
+                const plot = {id:this.selectedPlot.id,x1:this.startX,y1:this.startY,x2:this.width , y2:this.height};
+                this.updateData(plot);
+
+            }
+
+            this.handelStartDrag = (e) => {
+
+            }
+            this.handelEndDrag = (e) => {
+
+            }
+            this.handelClickOut = (e) => {
+                if (e.target.tagName != 'rect') {
+                    this.addrec();
+                    e.currentTarget.removeEventListener('click', this.handelClickOut);
+                    this.listeners.forEach(eventListener => {
+                        this.svgview.addEventListener(eventListener.type, eventListener.handler);
+                    });
+                }
+
+            }
+            this.handelClickOnPlot = (e) => {
+                if (this.selectedPlot) {
+
+                    this.selectedPlot.removeEventListener('mousedown', this.handlePlotMouseDown);
+                    document.body.removeEventListener('click', this.handelClickOut);
+                    const child = this.selectedPlot.children;
+                    const start = child[1];
+                    const end = child[2];
+                    const rect = child[0].children[0];
+
+                    rect.style.stroke = "rgb(48, 82, 143)";
+                    rect.style.strokeWidth = "3";
+                    rect.style.fill = "rgba(48, 82, 143, 0.2)";
+                    rect.style.fillOpacity = "0.2";
+                    start.style.display = "none";
+                    end.style.display = "none";
+                }
+                this.selectedPlot = e.currentTarget;
+                this.listeners.forEach(eventListener => {
+                    this.svgview.removeEventListener(eventListener.type, eventListener.handler);
+                });
+                this.selectedPlot.addEventListener('mousedown', this.handlePlotMouseDown);
+                document.body.addEventListener('click', this.handelClickOut);
+                const child = this.selectedPlot.children;
+                const start = child[1];
+                const end = child[2];
+                const rect = child[0].children[0];
+
+                rect.style.stroke = "rgb(254, 0, 0)";
+                rect.style.strokeWidth = "3";
+                rect.style.fill = "rgba(254, 0, 0)";
+                rect.style.fillOpacity = "0.2";
+                start.style.display = "block";
+                end.style.display = "block";
+
+
+
+
+            }
+        }
+        cropDesigner.prototype.updateData = function(plot){
+            for (const tplot of this.data) {
+                if (tplot.id == plot.id) {
+                    tplot.x1 = plot.x1;
+                    tplot.y1 = plot.y1;
+                    tplot.x2 = plot.x2;
+                    tplot.y2 = plot.y2;
+                }
+            }
+        }
+        cropDesigner.prototype.Store = function (store = {
+            imgfile: { url: "", mimetype: "", width: "", height: "" },
+            entryspec: [{ id: "", tag: "", x1: "", y1: "", x2: "", y2: "" },]
+        }) {
+            const image = new Image();
+            image.src = store.imgfile.url;
+            const plotlist = store.entryspec;
+            const handleMouseDown = (event) => {
+                this.isDrawing = true;
+                const svgPoint = this.getSVGPoint(event.clientX, event.clientY);
+                startX = svgPoint.x;
+                startY = svgPoint.y;
+                this.startX = startX;
+                this.startY = startY;
+                currentRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                currentRect.setAttribute("x", startX);
+                currentRect.setAttribute("y", startY);
+                currentRect.setAttribute("width", 0);
+                currentRect.setAttribute("height", 0);
+                currentRect.style.stroke = "rgb(254, 0, 0)";
+                currentRect.style.strokeWidth = "3";
+                currentRect.style.fill = "rgba(254, 0, 0)";
+                currentRect.style.fillOpacity = "0.2";
+                this.currentRect = currentRect;
+                this.svgview.appendChild(this.currentRect);
+            };
+            const handleMouseMove = (event) => {
+                if (!this.isDrawing) return;
+
+                const svgPoint = this.getSVGPoint(event.clientX, event.clientY);
+                this.width = svgPoint.x - startX;
+                this.height = svgPoint.y - startY;
+
+                this.currentRect.setAttribute("width", this.width);
+                this.currentRect.setAttribute("height", this.height);
+            };
+
+            const handleMouseUp = () => {
+                if (!this.isDrawing) return;
+
+                this.isDrawing = false;
+                if (this.width == 0) {
+                    return;
+                }
+                let id = this.getid();
+                let tag = 'plt' + id;
+                let x1 = Math.round(this.startX);
+                let y1 = Math.round(this.startY);
+                let x2 = Math.round(this.width + x1);
+                let y2 = Math.round(this.height + y1);
+                let plot = { id, tag, x1, y1, x2, y2 };
+                this.data.push(plot);
+                this.width = 0;
+                this.height = 0;
+                this.startX = 0;
+                this.startY = 0;
+
+                this.addrec();
+                this.spreadsheet();
+                this.svgview.removeChild(this.currentRect);
+                this.currentRect = null;
+
+            };
+
+            const handleMouseLeave = () => {
+                if (!this.isDrawing) return;
+                this.svgview.removeChild(this.currentRect);
+                this.currentRect = null;
+                this.isDrawing = false;
+            };
+
+
+            const eventListeners = [
+                { type: "mousedown", handler: handleMouseDown },
+                { type: "mousemove", handler: handleMouseMove },
+                { type: "mouseup", handler: handleMouseUp },
+                { type: "mouseleave", handler: handleMouseLeave }
+            ];
+            return ({ image: image, plotlist: plotlist, listeners: eventListeners });
+        }
+        cropDesigner.prototype.getid = function () {
+            let id = 1;
+            this.data.forEach(e => {
+                id = e.id == id ? id += 1 : id;
+            });
+            return id;
+        }
+        cropDesigner.prototype.App = function (store, views = { image, table }) {
+            console.log(views);
+            const eventListeners = store.listeners;
+            const image = store.image;
+            const width = image.width;
+            const height = image.height;
+            this.svgContainer = views.imageView;
+            this.tableView = views.tableView;
+            const svgview = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+            svgview.setAttribute("viewBox", "0 0 " + width + " " + height);
+
+            const imageElement = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            imageElement.setAttribute("width", width);
+            imageElement.setAttribute("height", height);
+            imageElement.setAttribute("href", image.src);
+            svgview.appendChild(imageElement);
+            eventListeners.forEach(eventListener => {
+                svgview.addEventListener(eventListener.type, eventListener.handler);
+            });
+            this.listeners = eventListeners;
+            this.svgview = svgview;
+            this.svgContainer.appendChild(this.svgview);
+            this.data = store.plotlist;
+            this.addrec();
+            this.spreadsheet();
+
+
+
+
+        }
+        cropDesigner.prototype.getSVGPoint = function (x, y) {
+            const svgPoint = this.svgview.createSVGPoint();
+            svgPoint.x = x;
+            svgPoint.y = y;
+            return svgPoint.matrixTransform(this.svgview.getScreenCTM().inverse());
+        }
+        cropDesigner.prototype.addrec = function () {
+            this.refresh();
+
+            for (const plot of this.data) {
+                console.log(plot);
+                let width = plot.x2 - plot.x1;
+                let height = plot.y2 - plot.y1;
+                let g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.setAttribute('transform', 'translate(' + plot.x1 + ' ' + plot.y1 + ')');
+                g.setAttribute('id', plot.id);
+                let ig = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+                let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("width", width);
+                rect.setAttribute("height", height);
+                rect.style.stroke = "rgb(48, 82, 143)";
+                rect.style.strokeWidth = "3";
+                rect.style.fill = "rgba(48, 82, 143, 0.2)";
+
+                let rect2 = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect2.setAttribute("width", "30");
+                rect2.setAttribute("height", "30");
+                rect2.style.fill = "rgba(48, 82, 143)";
+                let text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("x", "15");
+                text.setAttribute("y", "20");
+                text.style.fill = "#fff";
+                text.style.fontSize = "16";
+                text.style.userSelect = "none";
+                text.innerHTML = plot.id;
+
+                let start = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                let end = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+
+                start.setAttribute("fill", "#fff");
+                start.setAttribute("stroke", "#fe0000");
+                start.setAttribute("stroke-width", "2");
+                start.setAttribute("r", "8");
+                start.setAttribute("cx", "0");
+                start.setAttribute("cy", "0");
+                start.setAttribute("style", "cursor: move; display: none;");
+
+                end.setAttribute("fill", "#fff");
+                end.setAttribute("stroke", "#fe0000");
+                end.setAttribute("stroke-width", "2");
+                end.setAttribute("r", "8");
+                end.setAttribute("cx", width);
+                end.setAttribute("cy", height);
+                end.setAttribute("style", "cursor: move; display: none;");
+
+
+                ig.appendChild(rect);
+                ig.appendChild(rect2);
+                ig.appendChild(text);
+                g.appendChild(ig);
+                g.appendChild(start);
+                g.appendChild(end);
+
+                g.addEventListener("click", this.handelClickOnPlot);
+                this.svgview.appendChild(g);
+
+            }
+
+
+        }
+        cropDesigner.prototype.refresh = function () {
+
+
+            const tagName = "g";
+
+            const g_arr = [];
+            for (let i = 0; i < this.svgview.children.length; i++) {
+                const child = this.svgview.children[i];
+                if (child.tagName == tagName) {
+                    g_arr.push(child);
+                }
+            }
+            g_arr.forEach(element => {
+                this.svgview.removeChild(element);
+            });
+        }
+        cropDesigner.prototype.spreadsheet = function () {
+            this.tableView.innerHTML = "";
+            const cropper = this;
+            const jexcelInstance = jspreadsheet(this.tableView, {
+                data: this.data,
+                columns: [
+                    {
+                        type: 'number',
+                        title: 'ID',
+                        readOnly: true,
+                        width: 50
+                    },
+                    {
+                        type: 'text',
+                        title: 'PlotName',
+                        width: 120,
+
+                    },
+                    {
+                        type: 'numeric',
+                        title: 'x1',
+                        width: 60
+                    },
+                    {
+                        type: 'numeric',
+                        title: 'y1',
+                        width: 60
+                    },
+                    {
+                        type: 'numeric',
+                        title: 'x2',
+                        width: 60
+                    },
+                    {
+                        type: 'numeric',
+                        title: 'y2',
+                        width: 60
+                    },
+                ],
+
+                onchange: function () {
+
+                    const newData = jexcelInstance.getJson();
+                    rec(newData);
+
+                    //processTableChanges(oldData, newData);
+                },
+
+
+            });
+            function rec(data) {
+                cropper.data = data;
+                cropper.addrec();
+            }
+        }
+
+    </script>
+    <script>
+        const json = { "imgfile": { "url": "./src/images/disp_form.png", "mimetype": "image\/png", "width": 2000, "height": 2829 }, "entryspec": [{ "id": 1, "tag": "t006", "x1": 163, "y1": 688, "x2": 553, "y2": 805 }, { "id": 2, "tag": "t007", "x1": 537, "y1": 691, "x2": 937, "y2": 795 }, { "id": 3, "tag": "t008", "x1": 930, "y1": 688, "x2": 1300, "y2": 788 }, { "id": 4, "tag": "t009", "x1": 1300, "y1": 668, "x2": 1537, "y2": 805 }] };
+        const imageView = document.getElementById('CropDesigner__ImageView');
+        const tableView = document.getElementById('CropDesigner__TableView');
+        const cropper = new cropDesigner;
+        const store = cropper.Store(json);
+        const app = cropper.App(store, { imageView, tableView });
+    </script>
+</body>
+
+</html>
