@@ -96,6 +96,7 @@ function cropDesigner() {
         }
         this.removeFGO();
         this.selectedElement = e.target;
+        this.selectedElement.style.cursor = 'move';
         document.body.removeEventListener('click', this.handelClickOut);
         document.body.addEventListener("mousemove", this.handelPlotMove);
         document.body.addEventListener("mouseup", this.handlePlotMouseUp);
@@ -112,7 +113,7 @@ function cropDesigner() {
         e.currentTarget.removeEventListener("mousemove", this.handelPlotMove);
         document.body.addEventListener('mousedown', this.handlePlotMouseDown);
         this.showTagBox();
-
+        this.selectedElement.style.cursor = 'default';
         this.startX = 0;
         this.startY = 0;
         this.width = 0;
