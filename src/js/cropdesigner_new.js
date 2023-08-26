@@ -94,7 +94,8 @@ function cropDesigner() {
         if (e.target.tagName != 'rect' && e.target.tagName != 'circle') {
             return;
         }
-        this.removeFGO();
+        if (this.selectedPlot) {
+            this.removeFGO();
         this.selectedElement = e.target;
         this.selectedElement.style.cursor = 'move';
         document.body.removeEventListener('click', this.handelClickOut);
@@ -107,6 +108,8 @@ function cropDesigner() {
         const svgPoint = this.getSVGPoint(event.clientX, event.clientY);
         this.mx = svgPoint.x;
         this.my = svgPoint.y;
+        }
+        
 
     }
     this.handlePlotMouseUp = (e) => {
@@ -680,16 +683,51 @@ cropDesigner.prototype.spreadsheet = function () {
             this.data_old = jexcelInstance.getJson();
 
         },
-        onchange: function () {
-
+        oninsertrow: function () {
+            ref();
+        },
+        ondeleterow: function () {
             const newData = jexcelInstance.getJson();
             rec(newData);
-
-            //processTableChanges(oldData, newData);
         },
+        oninsertcolumn: function () {
+           
+            ref();
+        },
+        ondeletecolumn: function () {
+           
+            ref();
+        },
+        onmerge: function () {
+           
+            ref();
+        },
+        onchangeheader: function () {
+           
+            ref();
+        },
+        onundo: function () {
+            const newData = jexcelInstance.getJson();
+            rec(newData);
+        },
+        onredo: function () {
+            const newData = jexcelInstance.getJson();
+            rec(newData);
+        },
+        onchange: function () {
+            const newData = jexcelInstance.getJson();
+            rec(newData);
+        },
+        onpaste: function () {
+            const newData = jexcelInstance.getJson();
+            rec(newData);
+        }
 
 
     });
+    function ref() {
+        cropper.spreadsheet(); 
+    }
     function rec(data) {
         cropper.data = data;
         cropper.addrec();
