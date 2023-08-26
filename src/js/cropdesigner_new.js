@@ -96,20 +96,20 @@ function cropDesigner() {
         }
         if (this.selectedPlot) {
             this.removeFGO();
-        this.selectedElement = e.target;
-        this.selectedElement.style.cursor = 'move';
-        document.body.removeEventListener('click', this.handelClickOut);
-        document.body.addEventListener("mousemove", this.handelPlotMove);
-        document.body.addEventListener("mouseup", this.handlePlotMouseUp);
-        document.body.removeEventListener('mousedown', this.handlePlotMouseDown);
+            this.selectedElement = e.target;
+            this.selectedElement.style.cursor = 'move';
+            document.body.removeEventListener('click', this.handelClickOut);
+            document.body.addEventListener("mousemove", this.handelPlotMove);
+            document.body.addEventListener("mouseup", this.handlePlotMouseUp);
+            document.body.removeEventListener('mousedown', this.handlePlotMouseDown);
 
 
 
-        const svgPoint = this.getSVGPoint(event.clientX, event.clientY);
-        this.mx = svgPoint.x;
-        this.my = svgPoint.y;
+            const svgPoint = this.getSVGPoint(event.clientX, event.clientY);
+            this.mx = svgPoint.x;
+            this.my = svgPoint.y;
         }
-        
+
 
     }
     this.handlePlotMouseUp = (e) => {
@@ -128,7 +128,7 @@ function cropDesigner() {
 
 
     this.handelClickOut = (e) => {
-       
+
         if (e.target.tagName == 'image') {
             this.addrec();
             e.currentTarget.removeEventListener('click', this.handelClickOut);
@@ -172,12 +172,12 @@ function cropDesigner() {
         const svgxy = this.getSVGPoint(x, y);
         this.startX = svgxy.x;
         this.startY = svgxy.y;
-        this.tag = this.selectedPlot.getAttribute('tag');
+        this.id = e.currentTarget.id
+        this.tag = e.currentTarget.getAttribute('tag');
         const svgwh = this.getSVGPoint(width, height);
         this.width = svgwh.x;
         this.height = svgwh.y;
-        const tag = this.selectedPlot.getAttribute('tag');
-        const id = this.selectedPlot.getAttribute('id');
+
 
         this.selectedPlot.addEventListener('mousedown', this.handlePlotMouseDown);
         document.body.addEventListener('click', this.handelClickOut);
@@ -192,6 +192,7 @@ function cropDesigner() {
         rect.style.fillOpacity = "0.2";
         start.style.display = "block";
         end.style.display = "block";
+        this.removeFGO();
         this.showTagBox();
 
 
@@ -200,17 +201,18 @@ function cropDesigner() {
 
     }
     this.handleDelete = (e) => {
-        for (const tplot of this.data) {
-            if (tplot.id == this.selectedPlot.id) {
-                this.data.pop(tplot);
-            }
+       
+        const indexToRemove = this.data.findIndex(item => item.id == this.id);
+
+        if (indexToRemove !== -1) {
+            this.data.splice(indexToRemove, 1);
         }
         this.spreadsheet();
         this.addrec();
     }
 
     this.handelTagchange = (e) => {
-       
+
         this.tag = e.target.value;
     }
     this.catchKey = (event) => {
@@ -322,7 +324,7 @@ cropDesigner.prototype.showTagBox = function () {
 
 }
 cropDesigner.prototype.updateTag = function (tag) {
-    
+
     for (const tplot of this.data) {
         if (tplot.id == this.selectedPlot.id) {
             tplot.tag = tag;
@@ -505,7 +507,7 @@ cropDesigner.prototype.addrec = function () {
     this.refresh();
 
     for (const plot of this.data) {
-       
+
         let width = plot.x2 - plot.x1;
         let height = plot.y2 - plot.y1;
         let g = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -675,6 +677,7 @@ cropDesigner.prototype.spreadsheet = function () {
             },
             {
                 type: 'numeric',
+                decimal: ',',
                 title: 'y2',
                 width: 60
             },
@@ -691,19 +694,19 @@ cropDesigner.prototype.spreadsheet = function () {
             rec(newData);
         },
         oninsertcolumn: function () {
-           
+
             ref();
         },
         ondeletecolumn: function () {
-           
+
             ref();
         },
         onmerge: function () {
-           
+
             ref();
         },
         onchangeheader: function () {
-           
+
             ref();
         },
         onundo: function () {
@@ -714,7 +717,8 @@ cropDesigner.prototype.spreadsheet = function () {
             const newData = jexcelInstance.getJson();
             rec(newData);
         },
-        onchange: function () {
+        onchange: function (value) {
+
             const newData = jexcelInstance.getJson();
             rec(newData);
         },
@@ -726,7 +730,7 @@ cropDesigner.prototype.spreadsheet = function () {
 
     });
     function ref() {
-        cropper.spreadsheet(); 
+        cropper.spreadsheet();
     }
     function rec(data) {
         cropper.data = data;
