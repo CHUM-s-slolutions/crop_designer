@@ -124,7 +124,7 @@ function cropDesigner() {
 
 
     this.handelClickOut = (e) => {
-
+       
         if (e.target.tagName == 'image') {
             this.addrec();
             e.currentTarget.removeEventListener('click', this.handelClickOut);
@@ -206,7 +206,7 @@ function cropDesigner() {
     }
 
     this.handelTagchange = (e) => {
-        console.log(e);
+       
         this.tag = e.target.value;
     }
     this.catchKey = (event) => {
@@ -318,7 +318,7 @@ cropDesigner.prototype.showTagBox = function () {
 
 }
 cropDesigner.prototype.updateTag = function (tag) {
-    console.log(this.id);
+    
     for (const tplot of this.data) {
         if (tplot.id == this.selectedPlot.id) {
             tplot.tag = tag;
@@ -501,7 +501,7 @@ cropDesigner.prototype.addrec = function () {
     this.refresh();
 
     for (const plot of this.data) {
-        console.log(plot);
+       
         let width = plot.x2 - plot.x1;
         let height = plot.y2 - plot.y1;
         let g = document.createElementNS("http://www.w3.org/2000/svg", "g");
